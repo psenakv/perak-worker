@@ -11,7 +11,7 @@ COPY src ./src
 RUN npm run build
 
 # Production stage - minimal image
-FROM node:22-alpine
+FROM node:22-alpine AS final
 
 WORKDIR /app
 
