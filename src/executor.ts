@@ -1,3 +1,4 @@
+import https from 'https';
 import type { JobRequest, JobResponse } from './types';
 
 const FETCH_TIMEOUT_MS = 25_000;
@@ -16,7 +17,7 @@ export async function executeRequest(request: JobRequest): Promise<JobResponse> 
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  console.log(`[executor] Fetching ${request.method} ${request.url}`);
+  console.log(`[executor] Fetching ${request.method} ${request.url}${request.ignore_tls_errors ? ' (TLS verification disabled)' : ''}`);
   console.log(`[executor] Request headers: ${JSON.stringify(request.headers)}`);
 
   try {
@@ -25,6 +26,7 @@ export async function executeRequest(request: JobRequest): Promise<JobResponse> 
       headers: request.headers,
       signal: controller.signal,
       redirect: 'follow',
+      ...(request.ignore_tls_errors ? { agent: new https.Agent({ rejectUnauthorized: false }) } : {}),
     };
 
     if (request.body !== null && request.body !== undefined) {

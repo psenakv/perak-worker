@@ -3,6 +3,7 @@ export interface JobRequest {
   url: string;
   headers: Record<string, string>;
   body: string | null;
+  ignore_tls_errors?: boolean;
 }
 
 export interface JobResponse {
