@@ -9,6 +9,7 @@
     "dev": "tsc --watch & node --watch dist/index.js"
   },
   "dependencies": {
+    "undici": "^7.22.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

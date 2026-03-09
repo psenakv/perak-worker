@@ -1,4 +1,4 @@
-import https from 'https';
+import { Agent } from 'undici';
 import type { JobRequest, JobResponse } from './types';
 
 const FETCH_TIMEOUT_MS = 25_000;
@@ -26,7 +26,7 @@ export async function executeRequest(request: JobRequest): Promise<JobResponse> 
       headers: request.headers,
       signal: controller.signal,
       redirect: 'follow',
-      ...(request.ignore_tls_errors ? { agent: new https.Agent({ rejectUnauthorized: false }) } : {}),
+      ...(request.ignore_tls_errors ? { dispatcher: new Agent({ connect: { rejectUnauthorized: false } }) } : {}),
     };
 
     if (request.body !== null && request.body !== undefined) {
