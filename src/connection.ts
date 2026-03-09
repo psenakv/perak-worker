@@ -5,10 +5,15 @@ import type { AdminToWorkerMessage, WorkerToAdminMessage } from './types';
 const MIN_RECONNECT_DELAY_MS = 5_000;
 const MAX_RECONNECT_DELAY_MS = 60_000;
 
+// If no message is received within this window, assume the connection is dead
+// and force-close so the reconnect logic can kick in.
+const DEAD_CONNECTION_TIMEOUT_MS = 60_000;
+
 export class WorkerConnection {
   private ws: WebSocket | null = null;
   private reconnectDelay = MIN_RECONNECT_DELAY_MS;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private deadConnectionTimer: NodeJS.Timeout | null = null;
   private isShuttingDown = false;
   private workerId: string | null = null;
   private workerName: string | null = null;
@@ -28,8 +33,24 @@ export class WorkerConnection {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.clearDeadConnectionTimer();
     if (this.ws) {
       this.ws.close(1000, 'Shutdown');
+    }
+  }
+
+  private resetDeadConnectionTimer() {
+    this.clearDeadConnectionTimer();
+    this.deadConnectionTimer = setTimeout(() => {
+      console.warn(`[connection] No message received for ${DEAD_CONNECTION_TIMEOUT_MS / 1000}s, assuming dead connection. Reconnecting...`);
+      this.ws?.terminate();
+    }, DEAD_CONNECTION_TIMEOUT_MS);
+  }
+
+  private clearDeadConnectionTimer() {
+    if (this.deadConnectionTimer) {
+      clearTimeout(this.deadConnectionTimer);
+      this.deadConnectionTimer = null;
     }
   }
 
@@ -43,9 +64,12 @@ export class WorkerConnection {
       console.log('[connection] Connected. Sending register message...');
       this.reconnectDelay = MIN_RECONNECT_DELAY_MS;
       this.send({ type: 'register', token: this.workerToken });
+      this.resetDeadConnectionTimer();
     });
 
     this.ws.on('message', (data: Buffer) => {
+      this.resetDeadConnectionTimer();
+
       let message: AdminToWorkerMessage;
       try {
         message = JSON.parse(data.toString()) as AdminToWorkerMessage;
@@ -59,6 +83,7 @@ export class WorkerConnection {
 
     this.ws.on('close', (code, reason) => {
       console.log(`[connection] Disconnected (code=${code}, reason=${reason.toString()})`);
+      this.clearDeadConnectionTimer();
       this.ws = null;
       this.workerId = null;
       this.workerName = null;
