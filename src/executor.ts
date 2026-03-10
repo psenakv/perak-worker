@@ -1,7 +1,7 @@
 import { Agent } from 'undici';
 import type { JobRequest, JobResponse } from './types';
 
-const FETCH_TIMEOUT_MS = 25_000;
+const FETCH_TIMEOUT_MS = 50_000;
 
 function formatErrorChain(err: unknown): string {
   const parts: string[] = [];
